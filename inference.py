@@ -37,8 +37,8 @@ vl_gpt = vl_gpt.to(torch.bfloat16).cuda().eval()
 conversation = [
     {
         "role": "User",
-        "content": "<image_placeholder>Describe each stage of this image.",
-        "images": ["./images/training_pipelines.jpg"],
+        "content": "<image_placeholder>The ingredient in the image is an example of dill, watercress, bean, leaf, broccoli, sorrel or asparagus?",
+        "images": ["/root/krishneel/Downloads/test_images/asparagus.png"],
     },
     {"role": "Assistant", "content": ""},
 ]
@@ -63,24 +63,28 @@ conversation = [
 
 # load images and prepare for inputs
 pil_images = load_pil_images(conversation)
-prepare_inputs = vl_chat_processor(
-    conversations=conversation, images=pil_images, force_batchify=True
-).to(vl_gpt.device)
 
-# run image encoder to get the image embeddings
-inputs_embeds = vl_gpt.prepare_inputs_embeds(**prepare_inputs)
+with torch.inference_mode():
+    prepare_inputs = vl_chat_processor(
+        conversations=conversation, images=pil_images, force_batchify=True
+    ).to(vl_gpt.device)
 
-# run the model to get the response
-outputs = vl_gpt.language_model.generate(
-    inputs_embeds=inputs_embeds,
-    attention_mask=prepare_inputs.attention_mask,
-    pad_token_id=tokenizer.eos_token_id,
-    bos_token_id=tokenizer.bos_token_id,
-    eos_token_id=tokenizer.eos_token_id,
-    max_new_tokens=512,
-    do_sample=False,
-    use_cache=True,
-)
+    # run image encoder to get the image embeddings
+    inputs_embeds = vl_gpt.prepare_inputs_embeds(**prepare_inputs)
 
-answer = tokenizer.decode(outputs[0].cpu().tolist(), skip_special_tokens=True)
-print(f"{prepare_inputs['sft_format'][0]}", answer)
+    # run the model to get the response
+    outputs = vl_gpt.language_model.generate(
+        inputs_embeds=inputs_embeds,
+        attention_mask=prepare_inputs.attention_mask,
+        pad_token_id=tokenizer.eos_token_id,
+        bos_token_id=tokenizer.bos_token_id,
+        eos_token_id=tokenizer.eos_token_id,
+        max_new_tokens=128,
+        do_sample=False,
+        use_cache=True,
+    )
+
+    answer = tokenizer.decode(outputs[0].cpu().tolist(), skip_special_tokens=True)
+    print(f"{prepare_inputs['sft_format'][0]}", answer)
+
+breakpoint()
